@@ -13,7 +13,6 @@ const DB_NAME = 'novelLibrary';
 const DB_VERSION = 1;
 const STORE_NAME = 'novels';
 const AUTH_HASH_KEY = 'nightreader_admin_hash';
-const AUTH_SESSION_KEY = 'nightreader_admin_session';
 const READING_POS_PREFIX = 'nightreader_pos_';
 
 /* cover background palette — muted, warm-leaning */
@@ -192,9 +191,8 @@ const Auth = {
     _admin: false,
 
     init: function () {
-        if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') {
-            this._admin = true;
-        }
+        // session is in-memory only — page refresh requires re-login
+        this._admin = false;
     },
 
     isPasswordSet: function () {
@@ -214,12 +212,10 @@ const Auth = {
 
     login: function () {
         this._admin = true;
-        sessionStorage.setItem(AUTH_SESSION_KEY, '1');
     },
 
     logout: function () {
         this._admin = false;
-        sessionStorage.removeItem(AUTH_SESSION_KEY);
     },
 
     isAdmin: function () { return this._admin; }
@@ -273,12 +269,21 @@ const UI = {
         State.novels.sort(function (a, b) { return (b.uploadDate || '').localeCompare(a.uploadDate || ''); });
 
         if (State.novels.length === 0) {
-            main.innerHTML =
+            var emptyHTML =
                 '<div class="empty-state">' +
                 '<div class="empty-icon">📚</div>' +
                 '<h3>书架上还没有书</h3>' +
-                '<p>这里暂时空无一物。如果你拥有管理员密码，可以登录后上传第一本小说，点亮这间深夜书房。</p>' +
-                '</div>';
+                '<p>这里暂时空无一物。如果你拥有管理员密码，可以登录后上传第一本小说，点亮这间深夜书房。</p>';
+            if (Auth.isAdmin()) {
+                emptyHTML +=
+                    '<button class="btn btn-primary" id="btn-upload-inline" style="margin-top:20px;">+ 上传第一本小说</button>';
+            }
+            emptyHTML += '</div>';
+            main.innerHTML = emptyHTML;
+            var uploadBtn = document.getElementById('btn-upload-inline');
+            if (uploadBtn) {
+                uploadBtn.addEventListener('click', function () { UI.openUploadModal(); });
+            }
             return;
         }
 
